@@ -166,7 +166,7 @@ body {
 .track {
   flex: 1;
   display: flex;
-  height: 24px;
+  height: 36px;
   border: 0.5px solid var(--hairline);
   border-radius: 4px;
   overflow: hidden;
@@ -174,17 +174,27 @@ body {
 
 .seg {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 2px 4px;
   border-right: 1px solid #fff;
-  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
+  line-height: 1.25;
 }
 
 .seg:last-child {
   border-right: none;
+}
+
+.seg-name {
+  font-size: 12px;
+}
+
+.seg-time {
+  font-size: 9px;
+  opacity: 0.8;
 }
 
 .seg-uncovered {
@@ -222,15 +232,22 @@ body {
   }
 
   .track {
-    height: 20px;
+    height: 30px;
   }
 
-  .seg,
   .role-label,
   .axis-tick,
   .shift-time,
   .shift-key {
     font-size: 11px;
+  }
+
+  .seg-name {
+    font-size: 11px;
+  }
+
+  .seg-time {
+    font-size: 8px;
   }
 
   .day-block,

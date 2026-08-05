@@ -147,8 +147,12 @@ Day heading  (e.g. "Monday" — weekday name only, no date)
   so width is proportional to hours. All tracks use the same total, so a given
   clock time sits at the same x across all four bars — which is why the axis can
   be drawn once at the top.
-- **Hours are read from the axis, not printed inside segments.** A segment shows
-  only a name. Do not write times into the bars.
+- **Each segment shows two lines:** the person's name (or its abbreviated
+  form — see ยง6), and below it, smaller and muted, its own start–end clock
+  time (e.g. "18:00–23:00"), computed from the segment's offset, not the
+  axis. The time line fits independently of the name line — on a narrow
+  segment the name may still show initials while the time line hides
+  entirely if it doesn't fit. Uncovered segments show neither line.
 
 ### Axis ticks
 
@@ -183,7 +187,7 @@ function colorFor(name) {
   track has a 0.5px `#e3e1d8` border, 4px radius, overflow hidden.
 - Ink `#24231f`, muted `#6b6a63`, faint `#9a988f`, hairlines `#e3e1d8`.
 
-Bars are ~24px tall on screen, ~20px in print.
+Bars are ~36px tall on screen, ~30px in print (two lines of text).
 
 ---
 
@@ -238,8 +242,8 @@ its own fit pass at landscape width.
 ## 7. Print
 
 - `@page { size: landscape; margin: 12mm; }`
-- Hide the toolbar; remove page padding; shrink bar height to ~20px and fonts to
-  11px.
+- Hide the toolbar; remove page padding; shrink bar height to ~30px, name to
+  11px, time line to 8px.
 - `break-inside: avoid` on day blocks and shift blocks so a shift never splits
   across a page break.
 - A week (7 days × 2 shifts × 4 bars) fits one landscape sheet at these sizes.

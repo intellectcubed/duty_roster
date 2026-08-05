@@ -2,7 +2,7 @@
 // label-fitting pass. No data fetching here — takes already-grouped rows.
 
 import { ROLES, SHIFTS, SHIFT_ORDER, DAYS } from "./config.js";
-import { buildSegments, axisTicks } from "./roster.js";
+import { buildSegments, axisTicks, hhmmToMin, minToHhmm } from "./roster.js";
 
 const PALETTE = [
   { bg: "#EEEDFE", fg: "#3C3489" },
@@ -46,7 +46,13 @@ function formatHhmm(hhmm) {
   return `${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}`;
 }
 
-function buildSegmentEl(seg) {
+// Converts a segment's shift-relative offset (0..720) back to a real clock
+// time for display, e.g. offset 300 into the night shift (starts 1800) -> "21:00".
+function clockLabelAt(shift, offsetMin) {
+  return formatHhmm(minToHhmm(hhmmToMin(shift.start) + offsetMin));
+}
+
+function buildSegmentEl(seg, shift) {
   const span = document.createElement("span");
   span.className = "seg";
   span.style.flex = `${seg.end - seg.start} 1 0`;
@@ -60,7 +66,18 @@ function buildSegmentEl(seg) {
   span.style.background = bg;
   span.style.color = fg;
   span.dataset.name = seg.name;
-  span.textContent = seg.name; // fitLabels shrinks this once real widths exist
+
+  const nameEl = document.createElement("span");
+  nameEl.className = "seg-name";
+  nameEl.textContent = seg.name; // fitLabels shrinks this once real widths exist
+
+  const timeEl = document.createElement("span");
+  timeEl.className = "seg-time";
+  const timeText = `${clockLabelAt(shift, seg.start)}–${clockLabelAt(shift, seg.end)}`;
+  timeEl.dataset.time = timeText;
+  timeEl.textContent = timeText; // fitLabels hides this if it doesn't fit
+
+  span.append(nameEl, timeEl);
   return span;
 }
 
@@ -68,7 +85,7 @@ function buildTrack(rows, shift) {
   const track = document.createElement("div");
   track.className = "track";
   for (const seg of buildSegments(rows, shift)) {
-    track.appendChild(buildSegmentEl(seg));
+    track.appendChild(buildSegmentEl(seg, shift));
   }
   return track;
 }
@@ -162,10 +179,13 @@ export function renderRoster(container, grouped) {
   }
 }
 
+const NAME_FONT = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
+const TIME_FONT = '9px system-ui, -apple-system, "Segoe UI", sans-serif';
+
 let _ctx;
-function measure(text) {
+function measure(text, font) {
   if (!_ctx) _ctx = document.createElement("canvas").getContext("2d");
-  _ctx.font = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
+  _ctx.font = font;
   return _ctx.measureText(text).width;
 }
 
@@ -195,19 +215,30 @@ export function fitLabels(root = document) {
     block.querySelectorAll(".seg[data-name]").forEach((span) => {
       const name = span.dataset.name;
       const avail = span.clientWidth - 8;
+      const nameEl = span.querySelector(".seg-name");
+      const timeEl = span.querySelector(".seg-time");
+
       const ladder = [name, firstInitialLastOf(name), lastNameOf(name), initialsOf(name)];
-      const chosen = ladder.find((c) => measure(c) <= avail);
+      const chosen = ladder.find((c) => measure(c, NAME_FONT) <= avail);
 
       if (chosen === undefined) {
-        span.textContent = "";
+        nameEl.textContent = "";
         span.classList.add("seg-swatch");
         addToKey(keyEl, initialsOf(name), name);
       } else {
-        span.textContent = chosen;
+        nameEl.textContent = chosen;
         span.classList.remove("seg-swatch");
         if (chosen === initialsOf(name) && chosen !== name) {
           addToKey(keyEl, initialsOf(name), name);
         }
+      }
+
+      // The time line fits (or hides) independently of the name line.
+      if (timeEl) {
+        const timeText = timeEl.dataset.time;
+        const fits = measure(timeText, TIME_FONT) <= avail;
+        timeEl.textContent = fits ? timeText : "";
+        timeEl.hidden = !fits;
       }
     });
   });
