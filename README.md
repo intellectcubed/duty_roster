@@ -1,8 +1,9 @@
 # EMS Duty Roster
 
-A static, printable web page that shows a week of EMS shifts as colored bars
-on a shared time axis. Read-only: it renders whatever's in Supabase. Editing
-the roster is a separate admin tool (not part of this repo).
+A static, printable web page that shows a recurring weekly EMS shift template
+(Monday–Sunday, no dates) as colored bars on a shared time axis. Read-only:
+it renders whatever's in Supabase. Editing the roster is a separate admin
+tool (not part of this repo).
 
 Full design spec: [docs/duty_roster_BUILD_SPEC.md](docs/duty_roster_BUILD_SPEC.md).
 
@@ -35,7 +36,7 @@ tests/roster.test.mjs    unit tests for the time math (node --test)
 No install needed. Serve the directory with any static file server, e.g.:
 
 ```bash
-python3 -m http.server 8000
+npx serve . -l 8000
 ```
 
 Open http://localhost:8000.
@@ -43,11 +44,11 @@ Open http://localhost:8000.
 ## Data model
 
 One row per coverage segment: a person covering a role for part (or all) of
-a shift. Splits are multiple rows for the same date/shift/role; uncovered
+a shift. Splits are multiple rows for the same day/shift/role; uncovered
 hours are never stored — they're the render-time complement. See the spec
 for the full schema and time math.
 
-Supabase table `roster_segments`: `duty_date, shift, role, member,
+Supabase table `roster_segments`: `day_of_week, shift, role, member,
 start_time, end_time`.
 
 ## Database

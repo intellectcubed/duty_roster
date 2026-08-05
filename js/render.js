@@ -1,7 +1,7 @@
 // DOM rendering: colored bars on a shared time axis, plus the adaptive
 // label-fitting pass. No data fetching here — takes already-grouped rows.
 
-import { ROLES, SHIFTS, SHIFT_ORDER } from "./config.js";
+import { ROLES, SHIFTS, SHIFT_ORDER, DAYS } from "./config.js";
 import { buildSegments, axisTicks } from "./roster.js";
 
 const PALETTE = [
@@ -40,14 +40,6 @@ function firstInitialLastOf(name) {
 function lastNameOf(name) {
   const t = tokens(name);
   return t[t.length - 1];
-}
-
-function formatDateHeading(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
 }
 
 function formatHhmm(hhmm) {
@@ -145,13 +137,13 @@ function buildShiftBlock(shiftKey, dayBucket) {
   return block;
 }
 
-function buildDayBlock(date, dayBucket) {
+function buildDayBlock(dayInfo, dayBucket) {
   const day = document.createElement("section");
   day.className = "day-block";
 
   const heading = document.createElement("h2");
   heading.className = "day-heading";
-  heading.textContent = formatDateHeading(date);
+  heading.textContent = dayInfo.label;
   day.appendChild(heading);
 
   for (const shiftKey of SHIFT_ORDER) {
@@ -161,10 +153,12 @@ function buildDayBlock(date, dayBucket) {
   return day;
 }
 
-export function renderRoster(container, grouped, dates) {
+// Always renders all seven days from config.js DAYS, in that fixed order —
+// this is a weekly template, not tied to any specific calendar week.
+export function renderRoster(container, grouped) {
   container.innerHTML = "";
-  for (const date of dates) {
-    container.appendChild(buildDayBlock(date, grouped[date]));
+  for (const dayInfo of DAYS) {
+    container.appendChild(buildDayBlock(dayInfo, grouped[dayInfo.key]));
   }
 }
 

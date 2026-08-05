@@ -14,6 +14,19 @@ export const ROLES = [
   { key: "member_2", label: "Member 2" },
 ];
 
+// This is a recurring weekly template, not a roster for a specific week —
+// always render all seven days in this fixed order, regardless of which
+// days have data.
+export const DAYS = [
+  { key: "monday", label: "Monday" },
+  { key: "tuesday", label: "Tuesday" },
+  { key: "wednesday", label: "Wednesday" },
+  { key: "thursday", label: "Thursday" },
+  { key: "friday", label: "Friday" },
+  { key: "saturday", label: "Saturday" },
+  { key: "sunday", label: "Sunday" },
+];
+
 // Public (publishable) Supabase project credentials — safe to commit, this
 // key only grants what the `roster_segments` read policy allows.
 // Leave supabaseUrl empty to fall back to data/sample-roster.csv.

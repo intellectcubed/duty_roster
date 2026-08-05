@@ -42,19 +42,16 @@ export function buildSegments(rows, shift) {
   return out;
 }
 
-// { [date]: { [shiftKey]: { [roleKey]: rawRow[] } } }
+// { [dayKey]: { [shiftKey]: { [roleKey]: rawRow[] } } }
+// Day order is a fixed weekly template (config.js DAYS), not derived here.
 export function groupRows(rows) {
   const grouped = {};
   for (const row of rows) {
-    const dateBucket = (grouped[row.date] ??= {});
-    const shiftBucket = (dateBucket[row.shift] ??= {});
+    const dayBucket = (grouped[row.day] ??= {});
+    const shiftBucket = (dayBucket[row.shift] ??= {});
     (shiftBucket[row.role] ??= []).push(row);
   }
   return grouped;
-}
-
-export function sortedDates(grouped) {
-  return Object.keys(grouped).sort();
 }
 
 export function minToHhmm(min) {

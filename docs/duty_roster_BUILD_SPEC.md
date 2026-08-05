@@ -17,8 +17,11 @@ drawn as a set of horizontal **colored bars** on a shared time axis, so that:
   two colored segments in the same bar, and
 - **uncovered hours** show as a hatched gap.
 
-No backend, no build step. Plain HTML/CSS/ES-modules served by GitHub Pages,
-reading a Google Sheet.
+No build step. Plain HTML/CSS/ES-modules served by GitHub Pages, reading
+Supabase (falls back to a bundled CSV sample when unconfigured).
+
+This is a **recurring weekly template**, not a roster tied to a specific
+calendar week — days are labeled Monday..Sunday, with no date.
 
 ---
 
@@ -31,16 +34,16 @@ reading a Google Sheet.
 - **Any role can be split** across people by hour. Example: crew leader ridden
   1800–2300 by one person, 2300–0600 by another.
 - Data is **one row per coverage segment**. A person covering a whole shift-role
-  is one row; a split is 2+ rows for the same date/shift/role with different
+  is one row; a split is 2+ rows for the same day/shift/role with different
   start/end times.
 - **"Uncovered" is never entered.** Any hours in a shift-role with no assigned
   row are the complement, computed at render time and drawn as a gap.
 
-### Data schema (Google Sheet / CSV — one flat table)
+### Data schema (Supabase table / CSV — one flat table)
 
 | column   | meaning                                | example      |
 | -------- | -------------------------------------- | ------------ |
-| `date`   | ISO `YYYY-MM-DD`                       | `2026-08-04` |
+| `day`    | lowercase weekday name                 | `monday`     |
 | `shift`  | `day` or `night`                       | `night`      |
 | `role`   | `crew_leader`/`driver`/`member_1`/`member_2` | `member_1` |
 | `member` | display name                           | `R. Kansal`  |
@@ -48,14 +51,15 @@ reading a Google Sheet.
 | `end`    | 24h `HHMM`, exclusive                  | `2300`       |
 
 Header row must be exactly those six lowercase names. Night-shift `end` is
-`0600`, not `3000`.
+`0600`, not `3000`. Day order for rendering is a fixed constant
+(Monday..Sunday), not derived from the data.
 
 ### Worked split example (Monday night, member_1 handing off, ending early)
 
 ```
-2026-08-04,night,member_1,R. Kansal,1800,2300
-2026-08-04,night,member_1,T. O'Neil,2300,0000
-2026-08-04,night,member_1,J. Edwards,0000,0500
+monday,night,member_1,R. Kansal,1800,2300
+monday,night,member_1,T. O'Neil,2300,0000
+monday,night,member_1,J. Edwards,0000,0500
 ```
 
 Renders as three colored segments (Kansal, O'Neil as a ~1h sliver, Edwards)
@@ -124,7 +128,7 @@ Invariant to test: the returned segments' durations sum to exactly 720.
 ## 4. Layout
 
 ```
-Day heading  (e.g. "Mon, Aug 4")
+Day heading  (e.g. "Monday" — weekday name only, no date)
   Shift block: day
     shift head:  "day   0600–1800"
     axis:        [role-label spacer][ 1800  2100  0000  0300  0600 ]  ← shared ticks
@@ -255,9 +259,9 @@ js/main.js            bootstrap, print, resize/beforeprint reflow
 data/sample-roster.csv  a full week in the schema above
 ```
 
-`dataSource.loadRows()` fetches CSV (published Google Sheet URL, or the bundled
-sample when none is set) and returns normalized rows. Prefer PapaParse for CSV
-(handles commas in quoted names) with a minimal hand-rolled fallback.
+`dataSource.loadRows()` fetches from Supabase's REST API (public/publishable
+key, gated by a read-only RLS policy), or the bundled sample CSV when no
+Supabase URL is configured, and returns normalized rows.
 
 ---
 
@@ -277,12 +281,9 @@ sample when none is set) and returns normalized rows. Prefer PapaParse for CSV
 
 ## 10. Phase 2 (not built yet) — editing
 
-A JS page that writes back to the sheet. **Preferred:** a Google Apps Script web
-app (`doGet` returns JSON, `doPost` writes rows), running as the sheet owner, so
-no API key or public sheet is exposed. Implement by replacing
-`dataSource.loadRows()` with a fetch to the script URL and adding `saveRows()`.
-Avoid client-side Google OAuth or an embedded API key unless Apps Script is
-ruled out.
+A separate admin tool, outside this repo, that writes to the same
+`roster_segments` Supabase table using the service_role/secret key (never
+exposed client-side here). This site stays read-only.
 
 ## Open question
 

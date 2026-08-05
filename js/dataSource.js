@@ -1,5 +1,9 @@
 // The ONLY module that fetches roster data. Returns normalized rows:
-// { date, shift, role, member, start, end }
+// { day, shift, role, member, start, end }
+//
+// This is a recurring weekly template (Monday..Sunday), not a roster tied
+// to calendar dates — day ordering is applied client-side from
+// config.js DAYS, not from the fetch/CSV order.
 //
 // Prefers Supabase (js/config.js SUPABASE_URL); falls back to the bundled
 // sample CSV when unconfigured, so the page always has something to render.
@@ -8,7 +12,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_TABLE } from "./config
 
 function normalize(row) {
   return {
-    date: row.date ?? row.duty_date,
+    day: row.day ?? row.day_of_week,
     shift: row.shift,
     role: row.role,
     member: row.member,
@@ -19,8 +23,7 @@ function normalize(row) {
 
 async function loadFromSupabase() {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`);
-  url.searchParams.set("select", "duty_date,shift,role,member,start_time,end_time");
-  url.searchParams.set("order", "duty_date.asc");
+  url.searchParams.set("select", "day_of_week,shift,role,member,start_time,end_time");
 
   const response = await fetch(url, {
     headers: {

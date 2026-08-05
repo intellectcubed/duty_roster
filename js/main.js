@@ -1,5 +1,5 @@
 import { loadRows } from "./dataSource.js";
-import { groupRows, sortedDates } from "./roster.js";
+import { groupRows } from "./roster.js";
 import { renderRoster, fitLabels } from "./render.js";
 
 const statusEl = document.getElementById("status");
@@ -16,16 +16,10 @@ async function boot() {
   try {
     const rows = await loadRows();
     const grouped = groupRows(rows);
-    const dates = sortedDates(grouped);
 
-    if (dates.length === 0) {
-      setStatus("No roster entries found.");
-      return;
-    }
-
-    renderRoster(rosterEl, grouped, dates);
+    renderRoster(rosterEl, grouped);
     requestAnimationFrame(() => fitLabels(rosterEl));
-    setStatus(`Loaded ${dates.length} day${dates.length === 1 ? "" : "s"}.`);
+    setStatus(`Loaded ${rows.length} coverage segment${rows.length === 1 ? "" : "s"}.`);
   } catch (err) {
     console.error(err);
     setStatus(`Failed to load roster: ${err.message}`, true);
