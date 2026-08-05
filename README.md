@@ -1,74 +1,77 @@
 # EMS Duty Roster
 
-A website for generating and managing the EMS duty roster. Built with
-Next.js (static export) and Supabase, hosted on GitHub Pages.
+A static, printable web page that shows a week of EMS shifts as colored bars
+on a shared time axis. Read-only: it renders whatever's in Supabase. Editing
+the roster is a separate admin tool (not part of this repo).
+
+Full design spec: [docs/duty_roster_BUILD_SPEC.md](docs/duty_roster_BUILD_SPEC.md).
 
 ## Stack
 
-- **Frontend:** Next.js (App Router, TypeScript, Tailwind CSS), built as a
-  static export (`output: "export"`) so it can be served from GitHub Pages.
-- **Backend:** [Supabase](https://supabase.com) (Postgres + auth), accessed
-  directly from the client via `@supabase/supabase-js`.
+- **Frontend:** plain HTML/CSS/ES-modules. No build step, no framework,
+  no npm dependency — served directly by GitHub Pages.
+- **Backend:** [Supabase](https://supabase.com) Postgres, read via the REST
+  API with the public/publishable key (respects row-level security). Falls
+  back to `data/sample-roster.csv` when Supabase isn't configured.
 
 ## Project structure
 
 ```
-src/app/            Next.js pages (App Router)
-src/components/      Shared UI components
-src/lib/supabase/    Supabase client setup
-src/types/           TypeScript types (roster domain + generated DB types)
-supabase/migrations/ SQL migrations for the Supabase schema
-.github/workflows/   CI: build + deploy to GitHub Pages
+index.html              entry page + toolbar (Print button, status)
+css/styles.css           screen styles + @media print (landscape)
+js/config.js             shift windows, roles, Supabase URL/key   ← edit point
+js/dataSource.js         the ONLY module that fetches data
+js/roster.js             time math, buildSegments, grouping (pure, testable)
+js/render.js             DOM bars + fitLabels (adaptive labels)
+js/main.js               bootstrap, print, resize/beforeprint reflow
+data/sample-roster.csv   a full week in the schema below, used as fallback
+supabase/migrations/     SQL migrations for the Supabase schema
+supabase/seed.sql        sample data matching sample-roster.csv
+tests/roster.test.mjs    unit tests for the time math (node --test)
 ```
 
 ## Local development
 
-1. Copy the env template and fill in your Supabase project's credentials
-   (Project Settings > API in the Supabase dashboard):
+No install needed. Serve the directory with any static file server, e.g.:
 
-   ```bash
-   cp .env.local.example .env.local
-   ```
+```bash
+python3 -m http.server 8000
+```
 
-2. Install dependencies and run the dev server:
+Open http://localhost:8000.
 
-   ```bash
-   npm install
-   npm run dev
-   ```
+## Data model
 
-3. Open http://localhost:3000.
+One row per coverage segment: a person covering a role for part (or all) of
+a shift. Splits are multiple rows for the same date/shift/role; uncovered
+hours are never stored — they're the render-time complement. See the spec
+for the full schema and time math.
+
+Supabase table `roster_segments`: `duty_date, shift, role, member,
+start_time, end_time`.
 
 ## Database
 
-Schema lives in `supabase/migrations/`. Apply it to your Supabase project
-with the [Supabase CLI](https://supabase.com/docs/guides/cli):
+Schema and sample data live in `supabase/`. Apply with the
+[Supabase CLI](https://supabase.com/docs/guides/cli):
 
 ```bash
 npx supabase link --project-ref <your-project-ref>
-npx supabase db push
+npx supabase db push --linked
+npx supabase db query --linked --file supabase/seed.sql
 ```
 
-After changing the schema, regenerate the TypeScript types:
-
-```bash
-npx supabase gen types typescript --project-id <your-project-ref> > src/types/database.ts
-```
+`js/config.js` holds the Supabase URL and publishable key — safe to commit,
+since it's a public/anon-scoped key gated by the read-only RLS policy.
 
 ## Deployment (GitHub Pages)
 
-`.github/workflows/deploy.yml` builds the static export and publishes it to
-GitHub Pages on every push to `main`.
+No build step, so no GitHub Actions workflow is needed. In the repo, go to
+**Settings > Pages**, set **Source** to "Deploy from a branch", and pick
+`main` / `/ (root)`.
 
-Setup, one time:
+## Tests
 
-1. In the repo, go to **Settings > Pages** and set **Source** to
-   "GitHub Actions".
-2. Add repo secrets (**Settings > Secrets and variables > Actions**):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-3. Push to `main`.
-
-`next.config.ts` sets `basePath`/`assetPrefix` to `/duty_roster` in
-production, assuming the GitHub repo is named `duty_roster`. If you name the
-repo something else, update `repoName` in `next.config.ts` to match.
+```bash
+node --test tests/
+```
