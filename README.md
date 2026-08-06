@@ -48,8 +48,11 @@ a shift. Splits are multiple rows for the same day/shift/role; uncovered
 hours are never stored — they're the render-time complement. See the spec
 for the full schema and time math.
 
-Supabase table `roster_segments`: `day_of_week, shift, role, member,
-start_time, end_time`.
+Supabase table `roster_segments`: `day_of_week, shift, role, member_id,
+start_time, end_time`. `member_id` is a FK to `members` (managed by the
+separate admin tool, see
+[docs/duty_roster_administration.md](docs/duty_roster_administration.md));
+this site reads member names via the public `members_public` view.
 
 ## Database
 

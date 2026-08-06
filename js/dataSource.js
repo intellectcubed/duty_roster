@@ -10,34 +10,59 @@
 
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_TABLE } from "./config.js";
 
-function normalize(row) {
+const MEMBERS_VIEW = "members_public";
+
+function supabaseHeaders() {
   return {
-    day: row.day ?? row.day_of_week,
-    shift: row.shift,
-    role: row.role,
-    member: row.member,
-    start: row.start ?? row.start_time,
-    end: row.end ?? row.end_time,
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
   };
 }
 
-async function loadFromSupabase() {
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`);
-  url.searchParams.set("select", "day_of_week,shift,role,member,start_time,end_time");
+async function fetchSupabase(path, params) {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${path}`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
 
-  const response = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-    },
-  });
-
+  const response = await fetch(url, { headers: supabaseHeaders() });
   if (!response.ok) {
-    throw new Error(`Supabase request failed: ${response.status} ${response.statusText}`);
+    throw new Error(`Supabase request failed (${path}): ${response.status} ${response.statusText}`);
   }
+  return response.json();
+}
 
-  const rows = await response.json();
-  return rows.map(normalize);
+// roster_segments.member_id -> members_public is joined client-side with a
+// second fetch rather than a PostgREST embed, since embedding through a
+// view (members_public exists so the anon key never sees phone numbers)
+// isn't guaranteed to be picked up the same way a direct table FK is.
+async function loadFromSupabase() {
+  const [segments, members] = await Promise.all([
+    fetchSupabase(SUPABASE_TABLE, {
+      select: "day_of_week,shift,role,member_id,start_time,end_time",
+    }),
+    fetchSupabase(MEMBERS_VIEW, { select: "id,first_name,last_name" }),
+  ]);
+
+  const nameById = new Map(members.map((m) => [m.id, `${m.first_name} ${m.last_name}`]));
+
+  return segments.map((row) => ({
+    day: row.day_of_week,
+    shift: row.shift,
+    role: row.role,
+    member: nameById.get(row.member_id) ?? "Unknown",
+    start: row.start_time,
+    end: row.end_time,
+  }));
+}
+
+function normalizeCsvRow(row) {
+  return {
+    day: row.day,
+    shift: row.shift,
+    role: row.role,
+    member: row.member,
+    start: row.start,
+    end: row.end,
+  };
 }
 
 function parseCsv(text) {
@@ -47,7 +72,7 @@ function parseCsv(text) {
     const cells = line.split(",").map((c) => c.trim());
     const row = {};
     header.forEach((key, i) => (row[key] = cells[i]));
-    return normalize(row);
+    return normalizeCsvRow(row);
   });
 }
 
