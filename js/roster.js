@@ -60,9 +60,3 @@ export function minToHhmm(min) {
   const m = wrapped % 60;
   return `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
 }
-
-// Five evenly spaced axis labels across the shift, every 3h.
-export function axisTicks(shift) {
-  const startMin = hhmmToMin(shift.start);
-  return Array.from({ length: 5 }, (_, i) => minToHhmm(startMin + i * 180));
-}

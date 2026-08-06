@@ -8,7 +8,7 @@ export const SHIFTS = {
 export const SHIFT_ORDER = ["day", "night"];
 
 export const ROLES = [
-  { key: "crew_leader", label: "Crew ldr" },
+  { key: "crew_leader", label: "Crew Leader" },
   { key: "driver", label: "Driver" },
   { key: "member_1", label: "Member 1" },
   { key: "member_2", label: "Member 2" },

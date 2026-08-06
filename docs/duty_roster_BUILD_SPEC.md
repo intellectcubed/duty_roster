@@ -1,27 +1,47 @@
-# Duty Roster — build spec (colored-bar design)
+# Duty Roster — build spec (shift-list design)
 
 Self-contained specification for building the Martinsville Rescue Squad duty
 roster view. Everything needed to implement the design is in this one file:
-data model, layout, exact colors, the adaptive-label algorithm, and the time
-math. If you're picking this up cold, build to this spec.
+data model, layout, exact colors, and the time math. If you're picking this
+up cold, build to this spec.
 
 ---
 
 ## 1. Goal
 
-A static, printable web page that shows a week of EMS shifts. Each shift is
-drawn as a set of horizontal **colored bars** on a shared time axis, so that:
+A static, printable web page that shows a week of EMS shifts as **one
+compact section per day/shift**, each a plain list of who's covering it —
+modeled directly on a real squad's printed roster (a scanned reference PDF),
+not invented from scratch. Sections flow through a 2-column (screen) /
+3-column (print, landscape has more width) newspaper-style layout. The same
+markup renders on screen and in print.
 
-- who is on each role is visible at a glance,
-- **split coverage** (two people covering different hours of one role) shows as
-  two colored segments in the same bar, and
-- **uncovered hours** show as a hatched gap.
+Two earlier designs were tried and dropped:
+- A colored-bar timeline (proportional-width bars on a shared time axis)
+  couldn't fit one printed page at a readable size — 7 days x 2 shifts x 4
+  bars rendered as 7 pages, confirmed by rendering to PDF.
+- A single unified table (14 rows x 4 role columns) fixed the page-count
+  problem but didn't match what the user actually wanted once they compared
+  it to a real reference roster.
+
+This design:
+- who is on each shift is visible at a glance — one section, one list,
+- **split coverage** (two+ people covering different hours of one role)
+  shows as consecutive rows, each with its own start/end time,
+- **uncovered hours** show as a red "Uncovered" row with its time range —
+  no separate visual language needed, it's just another row,
+- a small flag column (`*` = crew leader, `d` = driver, blank = member)
+  substitutes for the role-column-per-role structure other designs used.
 
 No build step. Plain HTML/CSS/ES-modules served by GitHub Pages, reading
 Supabase (falls back to a bundled CSV sample when unconfigured).
 
 This is a **recurring weekly template**, not a roster tied to a specific
-calendar week — days are labeled Monday..Sunday, with no date.
+calendar week — days are labeled Monday..Sunday, with no date. (The real
+reference roster this is modeled on only lists shifts that have assigned
+crew for that week; this site always shows all 14 day/shift sections,
+including empty ones marked "Uncovered" — visibility into gaps matters more
+here than matching that particular omission.)
 
 ---
 
@@ -29,7 +49,7 @@ calendar week — days are labeled Monday..Sunday, with no date.
 
 - **Two shifts per day.** `day` = 0600–1800, `night` = 1800–0600. The night
   shift **crosses midnight** — this drives all the time math below.
-- **Four roles per shift**, drawn top to bottom in this order:
+- **Four roles per shift**, one grid column each, in this order:
   `crew_leader`, `driver`, `member_1`, `member_2`.
 - **Any role can be split** across people by hour. Example: crew leader ridden
   1800–2300 by one person, 2300–0600 by another.
@@ -37,7 +57,7 @@ calendar week — days are labeled Monday..Sunday, with no date.
   is one row; a split is 2+ rows for the same day/shift/role with different
   start/end times.
 - **"Uncovered" is never entered.** Any hours in a shift-role with no assigned
-  row are the complement, computed at render time and drawn as a gap.
+  row are the complement, computed at render time.
 
 ### Data schema (Supabase table / CSV — one flat table)
 
@@ -52,7 +72,10 @@ calendar week — days are labeled Monday..Sunday, with no date.
 
 Header row must be exactly those six lowercase names. Night-shift `end` is
 `0600`, not `3000`. Day order for rendering is a fixed constant
-(Monday..Sunday), not derived from the data.
+(Monday..Sunday), not derived from the data. (Supabase reads join through a
+`member_id` FK instead of the flat `member` text column — see
+docs/duty_roster_administration.md — but the CSV fallback and the row shape
+used by rendering code stay as above.)
 
 ### Worked split example (Monday night, member_1 handing off, ending early)
 
@@ -62,8 +85,9 @@ monday,night,member_1,T. O'Neil,2300,0000
 monday,night,member_1,J. Edwards,0000,0500
 ```
 
-Renders as three colored segments (Kansal, O'Neil as a ~1h sliver, Edwards)
-followed by a hatched **uncovered** gap from 0500–0600.
+Renders in the Monday-night section as three consecutive rows (Kansal,
+O'Neil, Edwards — each with its own start/end time) followed by a fourth
+row, `Uncovered` / `05:00`–`06:00`, in red.
 
 ---
 
@@ -95,9 +119,11 @@ Day (start 0600): 0600→0, 1800→720.
 
 ### Build segments with gap-fill
 
-For one role in one shift, turn its rows into an ordered list of segments that
-**tiles the full 720 minutes**, inserting `{uncovered:true}` fillers in any
-holes:
+For one role in one shift, turn its rows into an ordered list of segments
+that **tiles the full 720 minutes**, inserting `{uncovered:true}` fillers in
+any holes. This is still needed with a grid — it's how a cell knows whether
+a role is a single full-shift assignment (show just the name, no times) vs.
+a split or a gap (show each entry with its own time range):
 
 ```js
 function buildSegments(rows, shift) {
@@ -123,143 +149,92 @@ function buildSegments(rows, shift) {
 
 Invariant to test: the returned segments' durations sum to exactly 720.
 
+To display a segment's actual clock time (e.g. "18:00–23:00"), convert its
+offset back: `minToHhmm(hhmmToMin(shift.start) + segment.start)`.
+
 ---
 
 ## 4. Layout
 
+14 `<section>`s (7 days x 2 shifts, in that order), flowed through a
+multi-column container (`column-count: 2` screen, `3` print):
+
 ```
-Day heading  (e.g. "Monday" — weekday name only, no date)
-  Shift block: day
-    shift head:  "day   0600–1800"
-    axis:        [role-label spacer][ 1800  2100  0000  0300  0600 ]  ← shared ticks
-    bar row:     [Crew ldr][ ============ track of segments ============ ]
-    bar row:     [Driver  ][ ============================================ ]
-    bar row:     [Member 1][ ============================================ ]
-    bar row:     [Member 2][ ============================================ ]
-    shift key:   (only if any name was abbreviated to initials)
-  Shift block: night
-    ...
+Monday — Day Crew                                    06:00–18:00
+─────────────────────────────────────────────────────────────────
+*  Alex Alvarez                                    06:00      18:00
+d  Morgan Chen                                      06:00      18:00
+   Dara Osei                                          06:00      18:00
+   Kai Flores                                          06:00      18:00
+
+Monday — Night Crew                                  18:00–06:00
+─────────────────────────────────────────────────────────────────
+*  Pat Whitfield                                    18:00      06:00
+d  Rhea Kansal                                       18:00      06:00
+   Taylor O'Neil                                     18:00      23:00
+   Noor Ibarra                                        23:00      00:00
+   Sam Delgado                                        00:00      05:00
+   Uncovered                                          05:00      06:00
+   Jordan Edwards                                    18:00      06:00
 ```
 
-- The **role-label column is fixed width** (~84px) so all four tracks share the
-  same left edge, and therefore the same time scale as the axis above them.
-- Each **track** is a flex row. Each **segment** is `flex: <durationMinutes> 1 0`
-  so width is proportional to hours. All tracks use the same total, so a given
-  clock time sits at the same x across all four bars — which is why the axis can
-  be drawn once at the top.
-- **Each segment shows two lines:** the person's name (or its abbreviated
-  form — see ยง6), and below it, smaller and muted, its own start–end clock
-  time (e.g. "18:00–23:00"), computed from the segment's offset, not the
-  axis. The time line fits independently of the name line — on a narrow
-  segment the name may still show initials while the time line hides
-  entirely if it doesn't fit. Uncovered segments show neither line.
-
-### Axis ticks
-
-Five labels evenly across the shift (every 3h): for night, `1800 2100 0000 0300
-0600`. Compute as `minToHhmm(shiftStartMin + i * 180)` for i in 0..4.
+- **Section title**: `"{Day} — {Day|Night} Crew"` plus the shift's time
+  range on the right (colored — amber for day, blue for night).
+- **Each row**: a one-character flag column (`*` crew_leader, `d` driver,
+  blank for member_1/member_2), the name (or `Uncovered`), then separate
+  start and end columns (not a combined string — matches the reference).
+  Times are italic, muted.
+- **Row order within a section**: `ROLES` order (crew_leader, driver,
+  member_1, member_2); within a role, `buildSegments` order (chronological,
+  gaps included). A split shows as consecutive rows sharing that role's
+  flag; a gap is a row with name `"Uncovered"`, styled red.
+- No per-person color, no chip, no proportional-width bars, no axis, no
+  per-segment label-fitting — the reference roster this is modeled on is
+  plain black-and-white text, and it's what a printer-friendly roster
+  should look like anyway.
 
 ---
 
 ## 5. Colors (exact)
 
-Each **person** gets a deterministic color: hash the name to an index into this
-palette (soft background + readable foreground):
+Deliberately minimal — the reference this is modeled on is plain
+black-and-white text, which also prints cleanly on any printer:
 
-```js
-const PALETTE = [
-  { bg: '#EEEDFE', fg: '#3C3489' }, { bg: '#E1F5EE', fg: '#0F6E56' },
-  { bg: '#E6F1FB', fg: '#0C447C' }, { bg: '#FAEEDA', fg: '#854F0B' },
-  { bg: '#EAF3DE', fg: '#27500A' }, { bg: '#FBEAF0', fg: '#72243E' },
-  { bg: '#FAECE7', fg: '#993C1D' }, { bg: '#F1EFE8', fg: '#444441' },
-];
-function colorFor(name) {
-  let h = 0;
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return PALETTE[h % PALETTE.length];
-}
-```
-
-- **Uncovered segment:** diagonal coral hatch, no text —
-  `repeating-linear-gradient(45deg, transparent 0 5px, rgba(216,90,48,0.14) 5px 10px)`.
-- **Shift-title accents:** day = `#854F0B` (amber), night = `#0C447C` (blue).
-- **Segment separators:** 1px white right-border between adjacent segments;
-  track has a 0.5px `#e3e1d8` border, 4px radius, overflow hidden.
-- Ink `#24231f`, muted `#6b6a63`, faint `#9a988f`, hairlines `#e3e1d8`.
-
-Bars are ~36px tall on screen, ~30px in print (two lines of text).
+- **Uncovered:** red text (`#b4261f`) for both the name and time cells.
+- **Section title accents:** day = `#854F0B` (amber), night = `#0C447C`
+  (blue).
+- Ink `#24231f`, muted `#6b6a63` (flags, times), hairlines `#e3e1d8`.
 
 ---
 
-## 6. Adaptive labels — the narrow-segment solution
+## 6. Print
 
-This is the crux of the design. A short segment can't fit a full name, so
-**measure the rendered width and step down a ladder**, after layout — never
-guess at authoring time.
+Same DOM as screen — no separate compact mode, no JS reflow pass needed on
+`resize`/`beforeprint` (a plain list doesn't need label-fitting at any
+width).
 
-For each rendered non-uncovered segment:
+- `@page { size: landscape; margin: 10mm; }`
+- Hide the toolbar; `column-count: 3` (more width available in landscape
+  than the screen's 2-column layout); smaller fonts than screen.
+- `break-inside: avoid` on each `.shift-section` so one never splits across
+  a column or page break.
 
-1. `avail = segment.clientWidth - 8` (px, accounts for padding).
-2. Candidate ladder, widest first:
-   `[fullName, "F. Last", "Last", initials]`.
-3. Measure each with a canvas 2D context using the **same font as the CSS**
-   (`12px system-ui, -apple-system, "Segoe UI", sans-serif`). Pick the first
-   candidate whose measured width ≤ `avail`.
-4. If even initials don't fit: render a **blank colored swatch** and add
-   `INITIALS = Full Name` to that shift's key line.
-5. If the chosen label is the initials form (and not the full name), also add it
-   to the key so the abbreviation is decodable.
-
-Name-form helpers: tokens = split on spaces/commas/periods. `initials` = first
-letter of first + last token (or first two letters if single token). `F. Last` =
-first initial + last token. `Last` = last token.
-
-```js
-let _ctx;
-function measure(text) {
-  if (!_ctx) _ctx = document.createElement('canvas').getContext('2d');
-  _ctx.font = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
-  return _ctx.measureText(text).width;
-}
-function fitLabels(root) {
-  root.querySelectorAll('.seg[data-name]').forEach(span => {
-    const name = span.dataset.name;
-    const avail = span.clientWidth - 8;
-    const ladder = [name, firstInitialLast(name), lastName(name), initials(name)];
-    const chosen = ladder.find(c => measure(c) <= avail);
-    if (chosen === undefined) { span.textContent = ''; span.classList.add('seg-swatch'); addToKey(span, initials(name), name); }
-    else { span.textContent = chosen; if (chosen === initials(name) && chosen !== name) addToKey(span, initials(name), name); }
-  });
-}
-```
-
-**Re-run `fitLabels` on:** initial render (inside `requestAnimationFrame`),
-window resize (debounce ~120ms), and `beforeprint` — so the print layout gets
-its own fit pass at landscape width.
+Verified via headless print-to-PDF: 1 page, all 7 days present (page count
++ extracted text), plus a rendered screenshot compared against the
+reference roster's layout — not just visual inspection in a browser tab.
 
 ---
 
-## 7. Print
-
-- `@page { size: landscape; margin: 12mm; }`
-- Hide the toolbar; remove page padding; shrink bar height to ~30px, name to
-  11px, time line to 8px.
-- `break-inside: avoid` on day blocks and shift blocks so a shift never splits
-  across a page break.
-- A week (7 days × 2 shifts × 4 bars) fits one landscape sheet at these sizes.
-
----
-
-## 8. File structure
+## 7. File structure
 
 ```
 index.html            entry page + toolbar (Print button, status)
 css/styles.css        screen styles + @media print (landscape)
-js/config.js          data source URL, shift windows, roles   ← edit point
+js/config.js          shift windows, roles, Supabase URL/key   ← edit point
 js/dataSource.js      the ONLY module that fetches data        ← phase-2 seam
 js/roster.js          time math, buildSegments, grouping (pure, testable)
-js/render.js          DOM bars + fitLabels
-js/main.js            bootstrap, print, resize/beforeprint reflow
+js/render.js          builds the day/shift <section>s + crew-list <table>s
+js/main.js            bootstrap, print button
 data/sample-roster.csv  a full week in the schema above
 ```
 
@@ -269,39 +244,28 @@ Supabase URL is configured, and returns normalized rows.
 
 ---
 
-## 9. Definition of done
+## 8. Definition of done
 
-- [ ] Loads the sample CSV and renders a week with no console errors.
-- [ ] Night shift renders left-to-right 1800→0600 with correct segment widths
-      (2300 sits at 5/12 across, not wrapped).
-- [ ] A 1-hour split segment shows initials; its full name appears in the shift
-      key.
-- [ ] An early-ending role shows a hatched uncovered gap for the remaining hours.
-- [ ] Each person's color is stable across the week (same name → same color).
-- [ ] Print preview is landscape, one week per page, no shift split across pages.
-- [ ] `buildSegments` output always tiles to 720 minutes (unit test).
+- [x] Loads the sample CSV / Supabase data and renders all 14 sections with
+      no console errors.
+- [x] A split role shows one row per person with each one's own start/end;
+      a non-split role shows one row, no redundant time repeated elsewhere.
+- [x] A gap shows as a red "Uncovered" row with its time range.
+- [x] Crew leader and driver rows show their flag (`*` / `d`); member rows
+      don't.
+- [x] Print preview is landscape, one week on one page, no shift section
+      split across pages — verified via headless print-to-PDF (page count
+      + text-content check).
+- [x] `buildSegments` output always tiles to 720 minutes (unit test).
+- [x] Screen and print render the same structure — no separate compact
+      mode to keep in sync.
+- [x] Layout matches the reference roster PDF this is modeled on (2/3
+      -column shift-list style), confirmed by side-by-side comparison.
 
 ---
 
-## 10. Phase 2 (not built yet) — editing
+## 9. Phase 2 (not built yet) — editing
 
 A separate admin tool, outside this repo, that writes to the same
 `roster_segments` Supabase table using the service_role/secret key (never
 exposed client-side here). This site stays read-only.
-
-## Compact print mode (resolved)
-
-7 days x 2 shifts x 4 bars doesn't fit one printed page at a readable size —
-confirmed by rendering to PDF (7 pages before this). Screen view always
-shows every role as a full bar, unchanged. **Print only**: a role fully
-covered by one person for the whole shift (not split, no gap) collapses to
-a single text line ("Crew ldr: A. Alvarez") instead of a bar; all of a
-shift's compact roles merge into one combined line. A role stays a full
-bar in print only if it's actually split or has an uncovered gap — that's
-what a crew chief needs to actually see at a glance on paper. When every
-role in a shift is compact, the axis is hidden too (nothing left needs it).
-
-Verified: full sample week (one split shift) renders at ~621px of content
-against a ~740px (Letter) / ~718px (A4) usable landscape page height —
-comfortable margin, one page, confirmed via headless print-to-PDF with
-page count and text-content checks, not just visual inspection.

@@ -1,9 +1,9 @@
 # EMS Duty Roster
 
 A static, printable web page that shows a recurring weekly EMS shift template
-(Monday–Sunday, no dates) as colored bars on a shared time axis. Read-only:
-it renders whatever's in Supabase. Editing the roster is a separate admin
-tool (not part of this repo).
+(Monday–Sunday, no dates) as a compact per-shift crew list, modeled on a
+real squad's printed roster. Read-only: it renders whatever's in Supabase.
+Editing the roster is a separate admin tool (not part of this repo).
 
 Full design spec: [docs/duty_roster_BUILD_SPEC.md](docs/duty_roster_BUILD_SPEC.md).
 
@@ -23,8 +23,8 @@ css/styles.css           screen styles + @media print (landscape)
 js/config.js             shift windows, roles, Supabase URL/key   ← edit point
 js/dataSource.js         the ONLY module that fetches data
 js/roster.js             time math, buildSegments, grouping (pure, testable)
-js/render.js             DOM bars + fitLabels (adaptive labels)
-js/main.js               bootstrap, print, resize/beforeprint reflow
+js/render.js             builds the day/shift <section>s + crew-list <table>s
+js/main.js               bootstrap, print button
 data/sample-roster.csv   a full week in the schema below, used as fallback
 supabase/migrations/     SQL migrations for the Supabase schema
 supabase/seed.sql        sample data matching sample-roster.csv

@@ -5,7 +5,6 @@
   --hairline: #e3e1d8;
   --day-accent: #854f0b;
   --night-accent: #0c447c;
-  --role-col: 84px;
 }
 
 * {
@@ -65,155 +64,78 @@ body {
 }
 
 .roster {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
 }
 
-.day-block {
+.roster-columns {
+  column-count: 2;
+  column-gap: 32px;
+}
+
+.shift-section {
   break-inside: avoid;
+  margin-bottom: 14px;
 }
 
-.day-heading {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 0 0 10px;
-}
-
-.shift-block {
-  break-inside: avoid;
-  margin-bottom: 16px;
-}
-
-.shift-head {
+.shift-section-title {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
-}
-
-.shift-title {
+  margin: 0 0 3px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.04em;
 }
 
-.shift-day .shift-title {
+.shift-day .shift-section-title {
   color: var(--day-accent);
 }
 
-.shift-night .shift-title {
+.shift-night .shift-section-title {
   color: var(--night-accent);
 }
 
 .shift-time {
+  font-weight: 400;
   color: var(--muted);
+  font-size: 10px;
+}
+
+.crew-list {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.crew-list td {
+  padding: 1px 4px;
+  vertical-align: baseline;
+  color: var(--ink);
   font-size: 11px;
 }
 
-.axis {
-  display: flex;
-  margin-bottom: 4px;
-}
-
-.role-label-spacer {
-  flex: 0 0 var(--role-col);
-}
-
-.axis-ticks {
-  position: relative;
-  flex: 1;
-  height: 14px;
-}
-
-.axis-tick {
-  position: absolute;
-  top: 0;
-  font-size: 10px;
-  color: var(--faint);
-  white-space: nowrap;
-}
-
-.axis-tick:first-child {
-  transform: translateX(0);
-}
-
-.axis-tick:last-child {
-  transform: translateX(-100%);
-}
-
-.axis-tick:not(:first-child):not(:last-child) {
-  transform: translateX(-50%);
-}
-
-.bar-row {
-  display: flex;
-  align-items: stretch;
-  margin-bottom: 2px;
-}
-
-.role-label {
-  flex: 0 0 var(--role-col);
-  display: flex;
-  align-items: center;
-  font-size: 11px;
+.flag-cell {
+  width: 14px;
+  font-weight: 700;
   color: var(--muted);
 }
 
-.track {
-  flex: 1;
-  display: flex;
-  height: 36px;
-  border: 0.5px solid var(--hairline);
-  border-radius: 4px;
-  overflow: hidden;
+.name-cell {
+  width: 100%;
 }
 
-.seg {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 4px;
-  border-right: 1px solid #fff;
+.time-cell {
   white-space: nowrap;
-  overflow: hidden;
-  line-height: 1.25;
-}
-
-.seg:last-child {
-  border-right: none;
-}
-
-.seg-name {
-  font-size: 12px;
-}
-
-.seg-time {
-  font-size: 9px;
-  opacity: 0.8;
-}
-
-.seg-uncovered {
-  background: repeating-linear-gradient(
-    45deg,
-    transparent 0 5px,
-    rgba(216, 90, 48, 0.14) 5px 10px
-  );
-}
-
-.shift-key {
-  padding-left: var(--role-col);
-  margin-top: 4px;
-  font-size: 10px;
+  font-style: italic;
   color: var(--muted);
+  text-align: right;
 }
 
-.compact-summary {
-  display: none;
+.uncovered-row .name-cell,
+.uncovered-row .time-cell {
+  color: #b4261f;
 }
 
 @media print {
@@ -229,76 +151,28 @@ body {
   body {
     padding: 0;
     margin: 0;
-    font-size: 11px;
-    line-height: 1.2;
+    font-size: 10px;
   }
 
   .roster {
     max-width: none;
-    gap: 4px;
   }
 
-  .day-heading {
-    font-size: 12px;
-    margin: 0 0 2px;
+  .roster-columns {
+    column-count: 3;
+    column-gap: 20px;
   }
 
-  .shift-block {
-    margin-bottom: 3px;
-  }
-
-  .shift-head {
-    margin-bottom: 2px;
-  }
-
-  .axis {
-    margin-bottom: 2px;
-  }
-
-  .track {
-    height: 26px;
-  }
-
-  .bar-row {
-    margin-bottom: 1px;
-  }
-
-  .role-label,
-  .axis-tick,
-  .shift-time,
-  .shift-key {
+  .shift-section-title {
     font-size: 10px;
   }
 
-  .seg-name {
-    font-size: 10px;
+  .shift-time {
+    font-size: 9px;
   }
 
-  .seg-time {
-    font-size: 8px;
-  }
-
-  .day-block,
-  .shift-block {
-    break-inside: avoid;
-  }
-
-  /* Roles fully covered by one person for the whole shift print as a
-     single compact text line instead of a bar — otherwise the full week
-     can't fit on one page. Roles that are split or have a gap keep their
-     bar so the coverage is still visible. */
-  .bar-row.role-compact-print {
-    display: none;
-  }
-
-  .compact-summary {
-    display: block;
-    padding-left: var(--role-col);
-    margin-bottom: 1px;
-    color: var(--muted);
-  }
-
-  .shift-block.all-compact-print .axis {
-    display: none;
+  .crew-list td {
+    font-size: 9px;
+    padding: 0 3px;
   }
 }
