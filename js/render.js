@@ -131,19 +131,44 @@ function buildShiftBlock(shiftKey, dayBucket) {
 
   block.appendChild(buildAxis(shift));
 
+  // Print-only compaction: a role that's fully covered by one person for
+  // the whole shift (not split, no gap) collapses to a plain text line
+  // instead of a colored bar — otherwise 7 days x 2 shifts x 4 bars can't
+  // fit on one printed page. Only roles that actually need the timeline
+  // (split coverage, or a gap) keep their bar in print. Screen view always
+  // shows every role as a full bar, unaffected by any of this.
+  const compactEntries = [];
+
   for (const role of ROLES) {
+    const rows = dayBucket?.[shiftKey]?.[role.key] ?? [];
+    const built = buildSegments(rows, shift);
+    const isCompact = built.length === 1 && !built[0].uncovered;
+
     const row = document.createElement("div");
     row.className = "bar-row";
+    if (isCompact) row.classList.add("role-compact-print");
 
     const label = document.createElement("div");
     label.className = "role-label";
     label.textContent = role.label;
     row.appendChild(label);
-
-    const rows = dayBucket?.[shiftKey]?.[role.key] ?? [];
     row.appendChild(buildTrack(rows, shift));
-
     block.appendChild(row);
+
+    if (isCompact) {
+      compactEntries.push(`${role.label}: ${built[0].name}`);
+    }
+  }
+
+  if (compactEntries.length > 0) {
+    const summary = document.createElement("div");
+    summary.className = "compact-summary";
+    summary.textContent = compactEntries.join("   ·   ");
+    block.appendChild(summary);
+  }
+
+  if (compactEntries.length === ROLES.length) {
+    block.classList.add("all-compact-print");
   }
 
   const key = document.createElement("div");

@@ -212,10 +212,14 @@ body {
   color: var(--muted);
 }
 
+.compact-summary {
+  display: none;
+}
+
 @media print {
   @page {
     size: landscape;
-    margin: 12mm;
+    margin: 10mm;
   }
 
   .toolbar {
@@ -225,25 +229,49 @@ body {
   body {
     padding: 0;
     margin: 0;
+    font-size: 11px;
+    line-height: 1.2;
   }
 
   .roster {
     max-width: none;
+    gap: 4px;
+  }
+
+  .day-heading {
+    font-size: 12px;
+    margin: 0 0 2px;
+  }
+
+  .shift-block {
+    margin-bottom: 3px;
+  }
+
+  .shift-head {
+    margin-bottom: 2px;
+  }
+
+  .axis {
+    margin-bottom: 2px;
   }
 
   .track {
-    height: 30px;
+    height: 26px;
+  }
+
+  .bar-row {
+    margin-bottom: 1px;
   }
 
   .role-label,
   .axis-tick,
   .shift-time,
   .shift-key {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .seg-name {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .seg-time {
@@ -253,5 +281,24 @@ body {
   .day-block,
   .shift-block {
     break-inside: avoid;
+  }
+
+  /* Roles fully covered by one person for the whole shift print as a
+     single compact text line instead of a bar — otherwise the full week
+     can't fit on one page. Roles that are split or have a gap keep their
+     bar so the coverage is still visible. */
+  .bar-row.role-compact-print {
+    display: none;
+  }
+
+  .compact-summary {
+    display: block;
+    padding-left: var(--role-col);
+    margin-bottom: 1px;
+    color: var(--muted);
+  }
+
+  .shift-block.all-compact-print .axis {
+    display: none;
   }
 }

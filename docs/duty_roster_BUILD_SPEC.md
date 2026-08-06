@@ -289,9 +289,19 @@ A separate admin tool, outside this repo, that writes to the same
 `roster_segments` Supabase table using the service_role/secret key (never
 exposed client-side here). This site stays read-only.
 
-## Open question
+## Compact print mode (resolved)
 
-Four bars per shift is generous vertically when most shifts aren't split.
-Consider a **compact mode**: draw a full bar only when a role is actually split,
-and collapse a single-person role to one name line. Decide once real data shows
-how often splits occur, or if two weeks must fit one page.
+7 days x 2 shifts x 4 bars doesn't fit one printed page at a readable size —
+confirmed by rendering to PDF (7 pages before this). Screen view always
+shows every role as a full bar, unchanged. **Print only**: a role fully
+covered by one person for the whole shift (not split, no gap) collapses to
+a single text line ("Crew ldr: A. Alvarez") instead of a bar; all of a
+shift's compact roles merge into one combined line. A role stays a full
+bar in print only if it's actually split or has an uncovered gap — that's
+what a crew chief needs to actually see at a glance on paper. When every
+role in a shift is compact, the axis is hidden too (nothing left needs it).
+
+Verified: full sample week (one split shift) renders at ~621px of content
+against a ~740px (Letter) / ~718px (A4) usable landscape page height —
+comfortable margin, one page, confirmed via headless print-to-PDF with
+page count and text-content checks, not just visual inspection.
