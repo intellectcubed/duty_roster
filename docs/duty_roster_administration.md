@@ -89,12 +89,16 @@ Attributes:
 - first name
 - middle name
 - last name
+- email
 - highest role: fk to roles
 - phone number
 - active (boolean)
 
 (also: `auth_user_id`, nullable FK to `auth.users` — links a member to
-their Supabase Auth account once they've logged in at least once)
+their Supabase Auth account once they've logged in at least once. On first
+login, the app finds the member row by matching `email` to the logged-in
+account's email and sets `auth_user_id`, so the audit trail can attribute
+changes to a real member instead of "Someone.")
 
 ### Table: roles
 Lookup table for the five member roles in §"Roles" above.

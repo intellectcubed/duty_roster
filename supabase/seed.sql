@@ -3,17 +3,17 @@
 delete from roster_segments;
 delete from members;
 
-insert into members (first_name, last_name, role_key, active) values
-  ('Alex', 'Alvarez', 'crew_chief', true),
-  ('Morgan', 'Chen', 'driver', true),
-  ('Dara', 'Osei', 'assistant', true),
-  ('Kai', 'Flores', 'cadet', true),
-  ('Pat', 'Whitfield', 'crew_chief', true),
-  ('Rhea', 'Kansal', 'emt', true),
-  ('Jordan', 'Edwards', 'assistant', true),
-  ('Taylor', 'O''Neil', 'emt', true),
-  ('Noor', 'Ibarra', 'cadet', true),
-  ('Sam', 'Delgado', 'assistant', true);
+insert into members (first_name, last_name, role_key, email, active) values
+  ('Alex', 'Alvarez', 'crew_chief', 'alex.alvarez@example.com', true),
+  ('Morgan', 'Chen', 'driver', 'morgan.chen@example.com', true),
+  ('Dara', 'Osei', 'assistant', 'dara.osei@example.com', true),
+  ('Kai', 'Flores', 'cadet', 'kai.flores@example.com', true),
+  ('Pat', 'Whitfield', 'crew_chief', 'pat.whitfield@example.com', true),
+  ('Rhea', 'Kansal', 'emt', 'rhea.kansal@example.com', true),
+  ('Jordan', 'Edwards', 'assistant', 'jordan.edwards@example.com', true),
+  ('Taylor', 'O''Neil', 'emt', 'taylor.oneil@example.com', true),
+  ('Noor', 'Ibarra', 'cadet', 'noor.ibarra@example.com', true),
+  ('Sam', 'Delgado', 'assistant', 'sam.delgado@example.com', true);
 
 -- Day shift crew (0600-1800), assigned every day of the week.
 insert into roster_segments (day_of_week, shift, role, member_id, start_time, end_time)
