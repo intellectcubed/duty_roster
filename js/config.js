@@ -8,10 +8,10 @@ export const SHIFTS = {
 export const SHIFT_ORDER = ["day", "night"];
 
 export const ROLES = [
-  { key: "crew_leader", label: "Crew Leader" },
-  { key: "driver", label: "Driver" },
-  { key: "member_1", label: "Member 1" },
-  { key: "member_2", label: "Member 2" },
+  { key: "crew_leader", label: "Crew Chief" },
+  { key: "driver", label: "EMT/Driver" },
+  { key: "member_1", label: "Crew" },
+  { key: "member_2", label: "Crew" },
 ];
 
 // This is a recurring weekly template, not a roster for a specific week —

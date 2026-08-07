@@ -1,10 +1,11 @@
-import { loadRows } from "./dataSource.js";
-import { groupRows } from "./roster.js";
+import { loadRosterModel } from "./rosterModel.js";
 import { renderRoster } from "./render.js";
 
 const statusEl = document.getElementById("status");
 const rosterEl = document.getElementById("roster");
 const printBtn = document.getElementById("print-btn");
+
+let model = null;
 
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
@@ -14,17 +15,22 @@ function setStatus(text, isError = false) {
 async function boot() {
   setStatus("Loading roster…");
   try {
-    const rows = await loadRows();
-    const grouped = groupRows(rows);
-
-    renderRoster(rosterEl, grouped);
-    setStatus(`Loaded ${rows.length} coverage segment${rows.length === 1 ? "" : "s"}.`);
+    model = await loadRosterModel();
+    renderRoster(model, rosterEl);
+    setStatus(`Loaded ${model.days.length} days.`);
   } catch (err) {
     console.error(err);
     setStatus(`Failed to load roster: ${err.message}`, true);
   }
 }
 
-printBtn?.addEventListener("click", () => window.print());
+// Explicit render-for-print step, not just an implicit @media print
+// restyle of whatever's already on screen: re-draw from the same model
+// right before printing, so what's printed is guaranteed current.
+printBtn?.addEventListener("click", () => {
+  if (!model) return;
+  renderRoster(model, rosterEl);
+  window.print();
+});
 
 boot();
